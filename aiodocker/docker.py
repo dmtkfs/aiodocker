@@ -135,7 +135,12 @@ class Docker:
                 connector = aiohttp.TCPConnector(ssl=ssl_context)  # type: ignore[arg-type]
                 self.docker_host = docker_host
             elif docker_host.startswith(UNIX_PRE):
-                connector = aiohttp.UnixConnector(docker_host[UNIX_PRE_LEN:])
+                # Fix: ensure event loop exists for aiohttp.UnixConnector
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = asyncio.get_event_loop()
+                connector = aiohttp.UnixConnector(docker_host[UNIX_PRE_LEN:], loop=loop)
                 # dummy hostname for URL composition
                 self.docker_host = UNIX_PRE + "localhost"
             elif docker_host.startswith(WIN_PRE):
